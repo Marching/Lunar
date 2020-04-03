@@ -1,0 +1,44 @@
+{
+  "name": "lunar",
+  "version": "0.0.1",
+  "description": "The script to calculate solar term.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib/**/*"
+  ],
+  "scripts": {
+    "lint": "tslint -p tsconfig.json",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "jest --config jestconfig.json",
+    "build": "tsc",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint",
+    "preversion" : "npm run lint",
+    "version" : "npm run format && git add -A src",
+    "postversion" : "git push && git push --tags"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GrayYoung/Calculate-Solar-Term.git"
+  },
+  "keywords": [
+    "Solar",
+    "Term"
+  ],
+  "author": "Marching Gray Young",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GrayYoung/Calculate-Solar-Term/issues"
+  },
+  "homepage": "https://github.com/GrayYoung/Calculate-Solar-Term#readme",
+  "devDependencies": {
+    "@types/jest": "^25.1.5",
+    "jest": "^25.2.6",
+    "prettier": "^2.0.2",
+    "ts-jest": "^25.3.0",
+    "tslint": "^6.1.1",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.8.3"
+  }
+}
