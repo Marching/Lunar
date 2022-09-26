@@ -1,11 +1,18 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "baseUrl": "./",
+    "target": "ES2020",
     "module": "commonjs",
+    "moduleResolution": "node",
     "declaration": true,
+    "lib": ["ES2020"],
     "outDir": "./lib",
-    "strict": true
+    "strict": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./types"
+    ]
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "**/__tests__/*"]
+  "include": ["./src/**/*.ts"],
+  "exclude": ["./node_modules", "./types/**/*.d.ts"]
 }
