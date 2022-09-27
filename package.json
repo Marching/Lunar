@@ -1,6 +1,6 @@
 {
-  "name": "lunar",
-  "version": "0.0.1",
+  "name": "@marching/lunar",
+  "version": "0.0.3",
   "description": "The script to calculate solar term.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GrayYoung/Calculate-Solar-Term.git"
+    "url": "git+https://github.com/GrayYoung/Lunar.git"
   },
   "keywords": [
     "Solar",
@@ -31,9 +31,9 @@
   "author": "Marching Gray Young",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/GrayYoung/Calculate-Solar-Term/issues"
+    "url": "https://github.com/GrayYoung/Lunar/issues"
   },
-  "homepage": "https://github.com/GrayYoung/Calculate-Solar-Term#readme",
+  "homepage": "https://github.com/GrayYoung/Lunar#readme",
   "devDependencies": {
     "@types/jest": "^29.0.3",
     "@typescript-eslint/eslint-plugin": "^5.38.0",

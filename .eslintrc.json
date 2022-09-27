@@ -26,26 +26,29 @@
   ],
   "rules": {
     "comma-dangle": ["error", "never"],
-    "@typescript-eslint/comma-dangle": "off",
     "eqeqeq": ["off"],
-    "semi": ["error", "always"],
-    "@typescript-eslint/semi": "off",
-    "space-before-function-paren": ["error", "never"],
-    "@typescript-eslint/space-before-function-paren": "off",
     "no-array-constructor": "off",
+    "object-shorthand": ["error", "never"],
+    "semi": ["error", "always"],
+    "space-before-function-paren": ["error", "never"],
     "@typescript-eslint/array-type": ["error", {
       "default": "generic",
       "readonly": "generic"
     }],
+    "@typescript-eslint/comma-dangle": ["error", "never"],
     "@typescript-eslint/no-array-constructor": "off",
     "@typescript-eslint/no-inferrable-types": "off",
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-unsafe-argument": "off",
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
     "@typescript-eslint/no-unsafe-member-access": "off",
     "@typescript-eslint/prefer-nullish-coalescing": "off",
     "@typescript-eslint/require-array-sort-compare": "warn",
     "@typescript-eslint/restrict-plus-operands": "off",
     "@typescript-eslint/restrict-template-expressions": "off",
-    "@typescript-eslint/strict-boolean-expressions": "off",
-    "@typescript-eslint/no-non-null-assertion": "off",
-    "@typescript-eslint/no-unsafe-call": "off"
+    "@typescript-eslint/semi": "off",
+    "@typescript-eslint/space-before-function-paren": "off",
+    "@typescript-eslint/strict-boolean-expressions": "off"
   }
 }
