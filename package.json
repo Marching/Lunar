@@ -1,7 +1,14 @@
 {
-  "name": "@marching/lunar",
+  "name": "lunar",
   "version": "0.0.3",
+  "author": "Marching Gray Young",
+  "license": "MIT",
   "description": "The script to calculate solar term.",
+  "keywords": [
+    "solar",
+    "tolar",
+    "lunar"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -11,6 +18,7 @@
     "lint": "tslint -p tsconfig.json",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "jest --config jestconfig.json",
+    "test-watch": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --config jestconfig.json",
     "build": "tsc",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
@@ -24,12 +32,6 @@
     "type": "git",
     "url": "git+https://github.com/GrayYoung/Lunar.git"
   },
-  "keywords": [
-    "Solar",
-    "Term"
-  ],
-  "author": "Marching Gray Young",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/GrayYoung/Lunar/issues"
   },
@@ -53,5 +55,9 @@
   "dependencies": {
     "@types/geojson": "^7946.0.10",
     "ephemeris": "^2.0.0"
+  },
+  "publishConfig": {
+    "name": "@marching/lunar",
+    "registry": "https://github.com/GrayYoung/Lunar.git"
   }
 }

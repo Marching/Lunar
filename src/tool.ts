@@ -1,3 +1,9 @@
+export function toPrecision(value: number, precision: number): number {
+  const p = Math.pow(10, precision);
+
+  return Math.round(value * p) / p;
+}
+
 /**
  * Whether the provided value is considered a number.
  * @docs-private

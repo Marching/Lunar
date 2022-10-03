@@ -1,87 +1,88 @@
-import { getPlanet, Result } from 'ephemeris';
-
-import { CH_STANDARD_POSITION } from './intl';
-import { getTermsOnYear, SolarTerm } from './solar-terms';
+import { calcMoonEclipticLongitude, calcSunEclipticLongitude, countSolarTerms, getTermOnDay, getTermsOnYear, SolarTerm } from './solar-terms';
 import { coerceInteger, isNumberValue } from './tool';
+
+export const TIME_ZONE_OFFSET = new Date().getTimezoneOffset();
+export const CHINESE_OFFSET = -480;
 
 const ZODIACS: Array<string> = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
 const CELESTIAL_STEMS: Array<string> = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
 const TERRESTRIAL_BRANCHES: Array<string> = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-const CAPITALIZE_NUMBER: Array<string> = ['日', '正', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
-const CAPITALIZE_TEN_NUMBER: Array<string> = ['初', '十', '廿', '卅', '　'];
+const CAPITALIZE_NUMBER: Array<string> = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+const CAPITALIZE_TEN_NUMBER: Array<string> = ['初', '十', '廿', '卅'];
+
+
 const DAY_TIME = 24 * 60 * 60 * 1000;
+const SUN_DAY_LONGITUDE_DIFF = 360 / 355;
+const MOON_DAY_LONGITUDE_DIFF = 360 / 29 / 2;
+const YEAR_ORIGIN = new Date(1984, 1, 2);
+const MONTH_ORIGIN = new Date(2013, 11, 7);
+const DAY_ORIGIN = new Date(1949, 9, 1, 0);
 
 
 
 export function getDaysOnYear(year: number): number {
-  return Math.ceil(
-    (new ChineseDate(year, 11, 31, 23, 59, 59, 999).getTime() - new ChineseDate(year, 0, 1).getTime()) / DAY_TIME
-  );
+  return Math.ceil((Date.UTC(year, 11, 31, 23, 59, 59, 999) - Date.UTC(year, 0, 1)) / DAY_TIME);
 }
 
-export function countNewMoonFrom(fromDate: ChineseDate, toDate: ChineseDate): Array<ChineseDate> {
-  const avgDeg = 360 / 29; // 29 is the average days of a lunar month
-  const moonDays: Array<{ date: ChineseDate; diffS: number; diffE: number }> = [];
-  const lunarDate = new ChineseDate(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 12, 0, 0, 0);
-  let sunResultS: Result<'sun'>, sunResultE: Result<'sun'>;
-  let moonResultS: Result<'moon'>, moonResultE: Result<'moon'>;
-  let diffS: number, diffE: number;
+export function isNewMoon(date: Date): boolean {
+  const lunarDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
 
-  fromDate = new ChineseDate(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0, 0);
-  toDate = new ChineseDate(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59, 999);
+  return Math.abs(calcSunEclipticLongitude(lunarDate) - calcMoonEclipticLongitude(lunarDate)) < MOON_DAY_LONGITUDE_DIFF;
+}
+
+export function countNewMoonDays(fromDate: Date, toDate: Date): Array<Date> {
+  const moonDays: Array<Date> = [];
+  let startDate: Date;
+  let endDate: Date;
+
+  if (fromDate.getTime() <= toDate.getTime()) {
+    startDate = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+    endDate = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+  } else {
+    startDate = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+    endDate = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+  }
 
   do {
-    sunResultS = getPlanet<'sun'>('sun', lunarDate, CH_STANDARD_POSITION[0], CH_STANDARD_POSITION[1], 0);
-    sunResultE = getPlanet<'sun'>(
-      'sun',
-      new ChineseDate(lunarDate.getFullYear(), lunarDate.getMonth(), lunarDate.getDate(), 23, 59, 59, 999),
-      CH_STANDARD_POSITION[0],
-      CH_STANDARD_POSITION[1],
-      0
-    );
-    moonResultS = getPlanet<'moon'>('moon', lunarDate, CH_STANDARD_POSITION[0], CH_STANDARD_POSITION[1], 0);
-    moonResultE = getPlanet<'moon'>(
-      'moon',
-      new ChineseDate(lunarDate.getFullYear(), lunarDate.getMonth(), lunarDate.getDate(), 23, 59, 59, 999),
-      CH_STANDARD_POSITION[0],
-      CH_STANDARD_POSITION[1],
-      0
-    );
-    diffS = Math.abs(sunResultS.observed.sun.apparentLongitudeDd - moonResultS.observed.moon.apparentLongitudeDd);
-    diffE = Math.abs(sunResultE.observed.sun.apparentLongitudeDd - moonResultE.observed.moon.apparentLongitudeDd);
-
-    if (diffS < avgDeg / 2) {
-      moonDays.push({
-        date: new ChineseDate(lunarDate.getFullYear(), lunarDate.getMonth(), lunarDate.getDate()),
-        diffS: diffS,
-        diffE: diffE
-      });
-      lunarDate.setDate(lunarDate.getDate() + 27);
+    if (isNewMoon(startDate)) {
+      moonDays.push(new Date(startDate));
+      startDate.setDate(startDate.getDate() + 27);
     }
-    lunarDate.setDate(lunarDate.getDate() + 1);
-  } while (lunarDate.getTime() < toDate.getTime());
+    startDate.setDate(startDate.getDate() + 1);
+  } while (startDate.getTime() <= endDate.getTime());
 
-  console.log(
-    moonDays
-      .map((item) => {
-        return `${item.date.toLocaleString()} => ${item.diffS} <-> ${item.diffE}`;
-      })
-      .join('\n')
-  );
-  console.log(`avgDeg: ${avgDeg}; moonDayCount: ${moonDays.length}`);
-  console.log(`fromDate: ${fromDate.toLocaleString()}; toDate: ${toDate.toLocaleString()}`);
-
-  return moonDays.map((item) => item.date);
+  return moonDays;
 }
 
-export abstract class LunarDateProperty extends Number {
-  public readonly nativeDate: ChineseDate;
-  protected readonly origin: ChineseDate;
+export function isLeapMonth(date: Date): boolean {
+  const year = date.getFullYear();
+  const guessWinterSolstice = new Date(year - 1, 11, 20);
+  const guessRainWater = new Date(year + 1, 1, 20);
+  const moonDays = countNewMoonDays(guessWinterSolstice, guessRainWater);
+  const length = moonDays.filter((moonDay) => moonDay.getTime() <= date.getTime()).length;
+  const currentMoonDay = new Date(moonDays[length - 1]);
+  const nextMoonDayTime = moonDays[length].getTime();
+  let isLeap = true;
+  let term: SolarTerm | null;
+
+  do {
+    term = getTermOnDay(currentMoonDay);
+    if (term && term.longitude % 30 === 0) {
+      isLeap = false;
+      break;
+    }
+    currentMoonDay.setDate(currentMoonDay.getDate() + 1);
+  } while (currentMoonDay.getTime() < nextMoonDayTime);
+
+  return isLeap;
+}
+
+abstract class LunarDateProperty extends Number {
+  public readonly nativeDate: Date;
   protected offset: number;
 
-  constructor(value: number, nativeDate: ChineseDate, origin: ChineseDate) {
+  constructor(value: number, nativeDate: Date) {
     super(Math.floor(value));
-    this.origin = origin;
     this.nativeDate = nativeDate;
     this.offset = this.calcDiff(value);
   }
@@ -96,53 +97,50 @@ export abstract class LunarDateProperty extends Number {
   protected abstract calcDiff(value?: number): number;
 
   protected calcCelestialStem(): number {
-    let stem = this.offset % 10;
-
-    return (stem += stem < 0 ? 10 : 0);
+    return (this.offset + 10) % 10;
   }
 
   protected calcBranch(): number {
-    let branch = this.offset % 12;
-
-    return (branch += branch < 0 ? 12 : 0);
+    return (this.offset + 12) % 12;
   }
 }
 
-export class LunarYear extends LunarDateProperty {
-  constructor(nativeDate: ChineseDate) {
-    super(nativeDate.getFullYear(), nativeDate, new ChineseDate(1985, 1, 2));
-  }
-
+class LunarYear extends LunarDateProperty {
   zodiac(): string {
-    this.offset = this.calcDiff();
     const indexBranch = this.calcBranch();
 
     return `${ZODIACS[indexBranch]}`;
   }
 
   toString(): string {
-    this.offset = this.calcDiff();
     return `${this.sexagesimal()}年 ${this.zodiac()}年`;
   }
 
   protected calcDiff(): number {
-    return this.nativeDate.getFullYear() - this.origin.getFullYear();
+    const year = this.nativeDate.getFullYear();
+    const lastTerms = getTermsOnYear(year - 1);
+    const winterSolstice = lastTerms.find((item) => item.longitude === 270)!.date!;
+    const moonDays = countNewMoonDays(winterSolstice, this.nativeDate).filter((item) => !isLeapMonth(item));
+    const firstMoonDay = moonDays[1 + (isNewMoon(winterSolstice) ? 1 : 0)];
+    let offset = year - YEAR_ORIGIN.getFullYear();
+
+    if (!firstMoonDay) {
+      offset -= 1;
+    }
+
+    return offset;
   }
 }
 
 export class LunarMonth extends LunarDateProperty {
-  constructor(value: number, nativeDate: ChineseDate) {
-    super(value, nativeDate, new ChineseDate(2013, 11, 7));
+  isLeap(): boolean {
+    return isLeapMonth(this.nativeDate);
   }
 
   capital(): string {
     const value = this.valueOf();
 
-    return value > 10 ? `${CAPITALIZE_NUMBER[10]}${CAPITALIZE_NUMBER[value - 10]}` : `${CAPITALIZE_NUMBER[value]}`;
-  }
-
-  isLeap(): boolean {
-    return false;
+    return value > 10 ? `${CAPITALIZE_TEN_NUMBER[Math.floor(value / 10)]}${CAPITALIZE_NUMBER[value % 10 - 1]}` : `${CAPITALIZE_NUMBER[value - 1]}`;
   }
 
   toString(): string {
@@ -150,65 +148,27 @@ export class LunarMonth extends LunarDateProperty {
   }
 
   protected calcDiff(value: number): number {
-    const fromDate = this.origin;
-    const toDate = this.nativeDate;
-    const startYear = fromDate.getFullYear();
-    const endYear = toDate.getFullYear();
-    const moonDays: Array<ChineseDate> = countNewMoonFrom(fromDate, toDate);
-    let countLeap: Array<ChineseDate> = [];
-    let terms: Array<SolarTerm> = [];
-    let midTerms: Array<SolarTerm>;
+    const isLater = MONTH_ORIGIN.getTime() < this.nativeDate.getTime();
+    const terms: Array<SolarTerm> = countSolarTerms(MONTH_ORIGIN, this.nativeDate);
+    let nonMidTerms: Array<SolarTerm>;
     let offset: number = 0;
 
-    for (let i = startYear; i <= endYear; i++) {
-      if (i === startYear || i === endYear) {
-        terms = terms.concat(getTermsOnYear(i, CH_STANDARD_POSITION).filter((item) => {
-          return item.date!.getTime() >= fromDate.getTime() && item.date!.getTime() <= toDate.getTime();
-        }));
-      } else {
-        terms = terms.concat(getTermsOnYear(i, CH_STANDARD_POSITION));
-      }
-    }
-    midTerms = terms.filter((item) => {
-      return item.longitude % 30 === 0;
+    nonMidTerms = terms.filter((item) => {
+      return item.longitude % 30 !== 0;
     });
-    countLeap = moonDays.filter((moonDay, i) => {
-      if (moonDays[i + 1] && !midTerms.some((item) => {
-        return item.date!.getTime() >= moonDay.getTime() && item.date!.getTime() < moonDays[i + 1].getTime();
-      })) {
-        return true;
-      }
-      return false;
-    });
+    offset = nonMidTerms.length - 1;
+    console.log(`${this.nativeDate.toISOString()} <-> ${MONTH_ORIGIN.toISOString()}: offset: ${offset}; terms: ${terms.length}; nonMidTerms: ${nonMidTerms.length};`);
 
-    console.log(terms.join('\n'));
-    console.log(moonDays.map((item) => item.toChineseString()).join('\n'));
-    console.log(countLeap.map((item) => item.toChineseString()).join('\n'));
-    offset = terms.length - midTerms.length + 1;
-    console.log(`offset: ${offset}; terms.length: ${terms.length}; midTerms.length: ${midTerms.length}; countLeap: ${countLeap.length};`);
-
-    return offset;
+    return value;
   }
 }
 
-export class LunarDay extends LunarDateProperty {
-  constructor(value: number, nativeDate: ChineseDate) {
-    super(value, nativeDate, new ChineseDate(1949, 9, 1));
-  }
-
+class LunarDay extends LunarDateProperty {
   capital(): string {
     const value = this.valueOf();
+    const unit = value % 10;
 
-    switch (value) {
-      case 10:
-        return '初十';
-      case 20:
-        return '二十';
-      case 30:
-        return '三十';
-      default:
-        return `${CAPITALIZE_TEN_NUMBER[Math.floor(value / 10)]}${CAPITALIZE_NUMBER[value % 10]}`;
-    }
+    return `${CAPITALIZE_TEN_NUMBER[Math.floor(value / 10)]}${unit === 0 ? CAPITALIZE_NUMBER[9] : CAPITALIZE_NUMBER[unit - 1]}`;
   }
 
   toString(): string {
@@ -216,7 +176,7 @@ export class LunarDay extends LunarDateProperty {
   }
 
   protected calcDiff(value: number): number {
-    return Math.round((this.nativeDate.getTime() - this.origin.getTime()) / DAY_TIME);
+    return Math.round((this.nativeDate.getTime() - DAY_ORIGIN.getTime()) / DAY_TIME);
   }
 }
 
@@ -224,9 +184,6 @@ export class LunarDay extends LunarDateProperty {
  * @description 8h = 28800000ms, minus 8 hours to get china time zone date.
  */
 export class ChineseDate extends Date {
-  public lunarYear!: LunarYear;
-  public lunarMonth!: LunarMonth;
-  public lunarDay!: LunarDay;
 
   constructor();
   constructor(value: Date | number | string);
@@ -248,12 +205,52 @@ export class ChineseDate extends Date {
     seconds?: number,
     ms?: number
   ) {
-    if (isNumberValue(year)) {
+    if (isNumberValue(year) && isNumberValue(month)) {
       super(Date.UTC(coerceInteger(year), coerceInteger(month), coerceInteger(date), coerceInteger(hours), coerceInteger(minutes), coerceInteger(seconds), coerceInteger(ms)) - 28800000);
+    } else if (typeof year !== 'undefined') {
+      super(year);
     } else {
-      super(year as unknown as (string | Date));
+      super();
     }
-    this.lunarYear = new LunarYear(this);
+  }
+
+  /**
+   * 
+   * @returns new instance of LunarYear.
+   */
+  getLunarYear(): LunarYear {
+    return new LunarYear(this.getFullYear(), this);
+  }
+
+  /**
+   * 
+   * @returns new instance of LunarMonth.
+   */
+  getLunarMonth(): LunarMonth {
+    const year = this.getFullYear();
+    const lastTerms = getTermsOnYear(year - 1);
+    const winterSolstice = lastTerms.find((item) => item.longitude === 270)!.date!;
+    const moonDays = countNewMoonDays(winterSolstice, this).filter((item) => !isLeapMonth(item));
+    const month = moonDays.length - (1 + (isNewMoon(winterSolstice) ? 1 : 0));
+
+    return new LunarMonth(month <= 0 ? month + 12 : month, this);
+  }
+
+  /**
+   * 
+   * @returns new instance of LunarDay.
+   */
+  getLunarDay(): LunarDay {
+    let testDate: Date = new Date(this);
+    let i: number = 0;
+
+    do {
+      i++;
+      i >= 30 && console.log(`${i} ${testDate.toISOString()}`);
+      testDate = new Date(this.getFullYear(), this.getMonth(), this.getDate(), -i);
+    } while (!isNewMoon(testDate) && i <= 30);
+
+    return new LunarDay(Math.ceil((this.getTime() - testDate.getTime()) / DAY_TIME) + 1, this);
   }
 
   toChineseString(): string {
@@ -261,43 +258,6 @@ export class ChineseDate extends Date {
   }
 
   toLunarString(): string {
-    if (!this.lunarMonth || !this.lunarDay) {
-      this.calcLunarDate();
-    }
-    return `农历${this.lunarYear.sexagesimal()}年${this.lunarMonth.capital()}月${this.lunarDay.sexagesimal()}日`;
-  }
-
-  calcLunarDate(): void {
-    const year = this.getFullYear();
-    let lunarMonth: number = 0;
-    let lunarDay: number = 0;
-  
-    let winterSolstice = new ChineseDate(year - 1, 11, 20, 12);
-    const relativeSunResult = getPlanet<'sun'>(
-      'sun',
-      winterSolstice,
-      CH_STANDARD_POSITION[0],
-      CH_STANDARD_POSITION[1],
-      0
-    );
-    // 270 winter solstice ecliptic longitude
-    const diffDays = (270 - relativeSunResult.observed.sun.apparentLongitudeDd) / 15;
-    winterSolstice = new ChineseDate(
-      winterSolstice.getFullYear(),
-      winterSolstice.getMonth(),
-      winterSolstice.getDate() + diffDays * 14
-    );
-    const moonDays = countNewMoonFrom(winterSolstice, this);
-    const count = moonDays.length;
-  
-    lunarMonth = count - 1;
-    if (count) {
-      lunarDay = Math.ceil((this.getTime() - moonDays[count - 1].getTime()) / DAY_TIME) + 1;
-    }
-    console.log(`lunarMonth: ${lunarMonth} | lunarDay: ${lunarDay}`);
-    console.log(`diffDays: ${diffDays}; winterSolstice: ${winterSolstice.toLocaleString()}`);
-
-    this.lunarMonth = new LunarMonth(lunarMonth, this);
-    this.lunarDay = new LunarDay(lunarDay, this);
+    return `农历${this.getLunarYear().sexagesimal()}年${this.getLunarMonth().capital()}月${this.getLunarDay().sexagesimal()}日`;
   }
 }
