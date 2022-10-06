@@ -1,5 +1,5 @@
 import { calcMoonEclipticLongitude, calcSunEclipticLongitude, countSolarTerms, getTermOnDay, getTermsOnYear, SolarTerm } from './solar-terms';
-import { coerceInteger, isNumberValue } from './tool';
+import { coerceInteger, isNumberValue, toPrecision } from './tool';
 
 export const TIME_ZONE_OFFSET = new Date().getTimezoneOffset();
 export const CHINESE_OFFSET = -480;
@@ -25,9 +25,29 @@ export function getDaysOnYear(year: number): number {
 }
 
 export function isNewMoon(date: Date): boolean {
-  const lunarDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+  const startTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 10);
+  const time = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 14, 59, 59);
+  let sunResult: number;
+  let moonResult: number;
+  let result = false;
 
-  return Math.abs(calcSunEclipticLongitude(lunarDate) - calcMoonEclipticLongitude(lunarDate)) < MOON_DAY_LONGITUDE_DIFF;
+  do {
+    sunResult = calcSunEclipticLongitude(time);
+    moonResult = calcMoonEclipticLongitude(time);
+    if (sunResult + MOON_DAY_LONGITUDE_DIFF >= 360) {
+      sunResult = sunResult - 360;
+    }
+    if (moonResult + MOON_DAY_LONGITUDE_DIFF >= 360) {
+      moonResult = moonResult - 360;
+    }
+    if (Math.abs(sunResult - moonResult) < MOON_DAY_LONGITUDE_DIFF) {
+      result = true;
+      break;
+    }
+    time.setHours(time.getHours() - 1);
+  } while (time.getTime() >= startTime.getTime());
+
+  return result;
 }
 
 export function countNewMoonDays(fromDate: Date, toDate: Date): Array<Date> {
@@ -56,11 +76,11 @@ export function countNewMoonDays(fromDate: Date, toDate: Date): Array<Date> {
 
 export function isLeapMonth(date: Date): boolean {
   const year = date.getFullYear();
-  const guessWinterSolstice = new Date(year - 1, 11, 20);
-  const guessRainWater = new Date(year + 1, 1, 20);
+  const guessWinterSolstice = new Date(year - 1, 11, 1);
+  const guessRainWater = new Date(year + 1, 1, 31);
   const moonDays = countNewMoonDays(guessWinterSolstice, guessRainWater);
   const length = moonDays.filter((moonDay) => moonDay.getTime() <= date.getTime()).length;
-  const currentMoonDay = new Date(moonDays[length - 1]);
+  const currentMoonDay = moonDays[length - 1];
   const nextMoonDayTime = moonDays[length].getTime();
   let isLeap = true;
   let term: SolarTerm | null;
@@ -150,16 +170,13 @@ export class LunarMonth extends LunarDateProperty {
   protected calcDiff(value: number): number {
     const isLater = MONTH_ORIGIN.getTime() < this.nativeDate.getTime();
     const terms: Array<SolarTerm> = countSolarTerms(MONTH_ORIGIN, this.nativeDate);
-    let nonMidTerms: Array<SolarTerm>;
-    let offset: number = 0;
-
-    nonMidTerms = terms.filter((item) => {
+    const nonMidTerms: Array<SolarTerm> = terms.filter((item) => {
       return item.longitude % 30 !== 0;
     });
-    offset = nonMidTerms.length - 1;
+    const offset: number = nonMidTerms.length - 1;
     console.log(`${this.nativeDate.toISOString()} <-> ${MONTH_ORIGIN.toISOString()}: offset: ${offset}; terms: ${terms.length}; nonMidTerms: ${nonMidTerms.length};`);
 
-    return value;
+    return offset;
   }
 }
 

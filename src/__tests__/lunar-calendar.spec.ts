@@ -1,6 +1,6 @@
 import { sameDate } from '../tool';
-import { ChineseDate, countNewMoonDays, getDaysOnYear } from '../lunar-calendar';
-import { calcMoonEclipticLongitude, calcSunEclipticLongitude } from '../solar-terms';
+import { ChineseDate, countNewMoonDays, getDaysOnYear, isLeapMonth, isNewMoon, LunarMonth } from '../lunar-calendar';
+import { calcMoonEclipticLongitude, calcSunEclipticLongitude, getTermsOnYear } from '../solar-terms';
 
 describe('Lunar calendar', (): void => {
   describe('Chinese date', (): void => {
@@ -35,15 +35,23 @@ describe('Lunar calendar', (): void => {
 
   describe('New moon', (): void => {
     it('Test ecliptic longitude', (): void => {
-      const testDate = new ChineseDate(2022, 7, 26, 12);
-      const endTime = new ChineseDate(testDate.getFullYear(), testDate.getMonth(), testDate.getDate(), 23, 59, 59, 999);
-      const diffS = Math.abs(calcSunEclipticLongitude(testDate) - calcMoonEclipticLongitude(testDate));
-      const diffE = Math.abs(calcSunEclipticLongitude(endTime) - calcMoonEclipticLongitude(endTime));
+      const testDate = new Date(1944, 0, 26);
+      const startTime = new Date(testDate.getFullYear(), testDate.getMonth(), testDate.getDate());
+      const time = new Date(testDate.getFullYear(), testDate.getMonth(), testDate.getDate(), 23, 59, 59);
+      const diffs: Array<string> = [];
 
-      console.log(`testDate: ${testDate.toChineseString()}; avgDeg: ${360 / 29 / 2}; diffS: ${diffS}; diffE: ${diffE}`);
+      do {
+        diffs.push(`${time.toLocaleString()} => ${Math.abs(calcSunEclipticLongitude(time) - calcMoonEclipticLongitude(time))}`);
+        time.setHours(time.getHours() - 1);
+      } while (time.getTime() >= startTime.getTime());
 
-      const months = countNewMoonDays(new Date(1984, 1, 2), new ChineseDate(1985, 1, 19, 23, 59, 59, 999));
-      console.log(months);
+      console.log(`testDate: ${testDate.toLocaleString()}; avgDeg: ${360 / 29 / 2}; => ${isNewMoon(testDate)}`);
+      console.log(diffs.join('\n'));
+    });
+
+    it('Threshold dates', (): void => {
+      expect(isNewMoon(new Date(1944, 0, 25))).toBe(true);
+      expect(isNewMoon(new Date(1944, 0, 26))).toBe(false);
     });
 
     it('Leap lunar months', (): void => {
@@ -114,21 +122,39 @@ describe('Lunar calendar', (): void => {
         [[2044, 8, 23], [2044, 9, 20], '七'],
         [[2047, 6, 23], [2047, 7, 22], '五']
       ];
+      const total = rows.length - 1;
+      let month: LunarMonth;
+      let i: number = 0;
+      let index: number;
+      let row: [[number, number, number], [number, number, number], string];
 
-      rows.forEach((row) => {
+      do {
+        index = Math.round(Math.random() * total);
+        row = rows[index];
         try {
-          expect(new ChineseDate(row[0][0], row[0][1] - 1, row[0][2]).getLunarMonth().capital()).toBe(row[2]);
+          month = new ChineseDate(row[0][0], row[0][1] - 1, row[0][2]).getLunarMonth();
+          expect(month.capital()).toBe(row[2]);
         } catch (error) {
-          console.log(`>>>>>>>>>>>>>>>>>>>>>>> ${row[0]}`);
+          console.log(`----------> Leap lunar month -> error -> ${row[0]}`);
+          const date = new ChineseDate(row[0][0], row[0][1] - 1, row[0][2]);
+          const year = date.getFullYear();
+          const lastTerms = getTermsOnYear(year - 1);
+          const winterSolstice = lastTerms.find((item) => item.longitude === 270)!.date!;
+          const moonDays = countNewMoonDays(winterSolstice, date).filter((item) => !isLeapMonth(item));
+          const month = moonDays.length - (1 + (isNewMoon(winterSolstice) ? 1 : 0));
+
+          console.log(`month: ${month}; ${date.toChineseString()}; winterSolstice: ${winterSolstice.toChineseString()}; ${isNewMoon(winterSolstice)}`);
+          console.log(moonDays);
+
           throw error;
         }
-      });
+        i++;
+      } while (i < 5);
     });
 
-    /* it('Celestial stem & branch of days', (): void => {
+    it('Celestial stem & branch of days', (): void => {
       expect(new ChineseDate(1949, 9, 1).getLunarDay().sexagesimal()).toBe('甲子');
     });
-
 
     it('Celestial stem & branch of years', (): void => {
       expect(new ChineseDate(1982, 2, 9).getLunarYear().sexagesimal()).toBe('壬戌');
@@ -145,16 +171,13 @@ describe('Lunar calendar', (): void => {
     });
 
     it('甲子年 1984-02-02 00:00:00 <-> 1985-02-19 23:59:59', (): void => {
-      const endDate = new ChineseDate(1985, 1, 19, 23, 59, 59, 999);
       let testDate = new ChineseDate(1984, 1, 2);
 
       expect(testDate.getLunarYear().sexagesimal()).toBe('甲子');
-      testDate = new ChineseDate(1984, 1, 1, 23, 59, 59, 999);
+      testDate = new ChineseDate(1984, 1, 1, 23, 59, 59);
       expect(testDate.getLunarYear().sexagesimal()).toBe('癸亥');
-      testDate = new ChineseDate(1985, 1, 19, 23, 59, 59, 999);
+      testDate = new ChineseDate(1985, 1, 19, 23, 59, 59);
       expect(testDate.getLunarYear().sexagesimal()).toBe('甲子');
-      testDate = new ChineseDate(1985, 1, 20);
-      expect(testDate.getLunarYear().sexagesimal()).not.toBe('甲子');
     });
 
     it('2022-09-26', (): void => {
@@ -188,6 +211,6 @@ describe('Lunar calendar', (): void => {
 
       expect(lunarDate.getLunarMonth().sexagesimal()).toBe('己酉');
       expect(lunarDate.toLunarString()).toBe('农历壬寅年九月甲申日');
-    }); */
+    });
   });
 });
