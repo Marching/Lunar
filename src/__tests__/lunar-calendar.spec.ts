@@ -1,6 +1,6 @@
 import { sameDate } from '../tool';
 import { ChineseDate, countNewMoonDays, getDaysOnYear, isLeapMonth, isNewMoon, LunarMonth } from '../lunar-calendar';
-import { calcMoonEclipticLongitude, calcSunEclipticLongitude, getTermsOnYear } from '../solar-terms';
+import { calcDiffOfSunAndMoon, getTermOnDay, getTermsOnYear, SolarTerm } from '../solar-terms';
 
 describe('Lunar calendar', (): void => {
   describe('Chinese date', (): void => {
@@ -35,23 +35,62 @@ describe('Lunar calendar', (): void => {
 
   describe('New moon', (): void => {
     it('Test ecliptic longitude', (): void => {
-      const testDate = new Date(1944, 0, 26);
+      const testDate = new Date(1985, 1, 20);
       const startTime = new Date(testDate.getFullYear(), testDate.getMonth(), testDate.getDate());
       const time = new Date(testDate.getFullYear(), testDate.getMonth(), testDate.getDate(), 23, 59, 59);
       const diffs: Array<string> = [];
 
       do {
-        diffs.push(`${time.toLocaleString()} => ${Math.abs(calcSunEclipticLongitude(time) - calcMoonEclipticLongitude(time))}`);
+        diffs.push(`${time.toLocaleString()} => ${calcDiffOfSunAndMoon(time)}`);
         time.setHours(time.getHours() - 1);
       } while (time.getTime() >= startTime.getTime());
 
-      console.log(`testDate: ${testDate.toLocaleString()}; avgDeg: ${360 / 29 / 2}; => ${isNewMoon(testDate)}`);
-      console.log(diffs.join('\n'));
+      console.log(`testDate: ${testDate.toLocaleString()}; avgDeg: ${360 / 29 / 2}; isNewMoon: => ${isNewMoon(testDate)} => isLeapMonth: ${isLeapMonth(testDate)}`);
+      console.log(diffs);
+
+
+      let moonDays: Array<Date>;
+      const year = testDate.getFullYear();
+      const lastTerms = getTermsOnYear(year - 1);
+      const winterSolstice = lastTerms.find((item) => item.longitude === 270)!.date!;
+      moonDays = countNewMoonDays(winterSolstice, testDate);
+      console.log(moonDays.map(item => item.toLocaleString()).join('\n'));
+      moonDays = moonDays.filter((item) => !isLeapMonth(item));
+      console.log(moonDays.map(item => item.toLocaleString()).join('\n'));
+      const firstMoonDayIndex = 1 + (isNewMoon(winterSolstice) ? 1 : 0);
+      const firstMoonDay = moonDays[firstMoonDayIndex];
+      let offset = year - new Date(1984, 1, 2).getFullYear();
+
+      if (!firstMoonDay) {
+        offset -= 1;
+      }
+      console.log(`testDate: ${testDate.toLocaleString()}; ${firstMoonDay?.toLocaleString()} | ${offset}; ${firstMoonDayIndex};`);
+
+      const guessWinterSolstice = new Date(year - 1, 11, 1);
+      const guessRainWater = new Date(year + 1, 1, 29);
+      moonDays = countNewMoonDays(guessWinterSolstice, guessRainWater);
+      const length = moonDays.filter((moonDay) => moonDay.getTime() <= testDate.getTime()).length;
+      const currentMoonDay = moonDays[length - 1];
+      const nextMoonDay = moonDays[length];
+      let term: SolarTerm | null;
+
+      console.log(`currentMoonDay: ${currentMoonDay.toLocaleString()}; nextMoonDayTime: ${nextMoonDay.toLocaleString()}`);
+      do {
+        term = getTermOnDay(currentMoonDay);
+        if (term && term.longitude % 30 === 0) {
+          console.log(`--------------------------------${term.label}`);
+          break;
+        }
+        currentMoonDay.setDate(currentMoonDay.getDate() + 1);
+      } while (currentMoonDay.getTime() < nextMoonDay.getTime());
     });
 
     it('Threshold dates', (): void => {
       expect(isNewMoon(new Date(1944, 0, 25))).toBe(true);
       expect(isNewMoon(new Date(1944, 0, 26))).toBe(false);
+
+      expect(isNewMoon(new Date(1985, 1, 19))).toBe(false);
+      expect(isNewMoon(new Date(1985, 1, 20))).toBe(true);
     });
 
     it('Leap lunar months', (): void => {
@@ -61,6 +100,7 @@ describe('Lunar calendar', (): void => {
       expect(testResult.isLeap()).toBe(true);
       expect(testResult.capital()).toBe('十');
       expect(new ChineseDate(1984, 11, 22).getLunarMonth().capital()).toBe('十一');
+      expect(new ChineseDate(1985, 1, 20).getLunarMonth().capital()).toBe('一');
 
       const rows: Array<[[number, number, number], [number, number, number], string]> = [
         [[1900, 9, 24], [1900, 10, 22], '八'],

@@ -1,10 +1,8 @@
-import { CH_STANDARD_POSITION } from '../intl';
 import { sameDate } from '../tool';
 import { ChineseDate } from '../lunar-calendar';
 import { calcSunEclipticLongitude, create24SolarTerms, getTermOnDay, getTermsOnYear } from '../solar-terms';
 
 describe('Lunar', (): void => {
-  const chStdPosition: GeoJSON.Position = CH_STANDARD_POSITION;
   const solarTerms = create24SolarTerms();
 
   console.log(solarTerms);
@@ -155,8 +153,8 @@ describe('Lunar', (): void => {
     });
 
     it('Log ecliptic longitudes', (): void => {
-      const testDate = new ChineseDate(2021, 11, 21);
-      const term = getTermOnDay(testDate, chStdPosition);
+      const testDate = new ChineseDate(1985, 2, 21);
+      const term = getTermOnDay(testDate);
 
       console.log(`${testDate.toChineseString()} => ${calcSunEclipticLongitude(testDate) % 360}`);
       testDate.setHours(12, 0, 0, 0);
@@ -246,6 +244,11 @@ describe('Lunar', (): void => {
     it('The term on 1984-12-21', (): void => {
       expect(getTermOnDay(new ChineseDate(1984, 11, 21))).toBeNull();
       expect(getTermOnDay(new ChineseDate(1984, 11, 22))?.order).toBe(19);
+    });
+
+    it('The term on 1985-03-21', (): void => {
+      expect(getTermOnDay(new ChineseDate(1985, 2, 20))).toBeNull();
+      expect(getTermOnDay(new ChineseDate(1985, 2, 21))?.order).toBe(1);
     });
 
     it('The term on 2018-03-21', (): void => {

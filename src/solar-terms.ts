@@ -41,6 +41,18 @@ export function calcSunEclipticLongitude(targetDate: Date, coordinate: GeoJSON.P
   return getPlanet<'sun'>('sun', targetDate, coordinate[0], coordinate[1], 0).observed.sun.apparentLongitudeDd;
 };
 
+export function calcDiffOfSunAndMoon(time: Date): number {
+  const sunResult: number = calcSunEclipticLongitude(time);
+  const moonResult: number = calcMoonEclipticLongitude(time);
+
+  return Math.min(
+    Math.abs(sunResult - moonResult),
+    Math.abs(sunResult - (moonResult - 360)),
+    Math.abs((sunResult - 360) - moonResult),
+    Math.abs((sunResult - 360) - (moonResult - 360))
+  );
+}
+
 export function getTermOnDay(date: Date, coordinate: GeoJSON.Position = CH_STANDARD_POSITION): SolarTerm | null {
   const dateS = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const dateE = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);

@@ -1,5 +1,5 @@
-import { calcMoonEclipticLongitude, calcSunEclipticLongitude, countSolarTerms, getTermOnDay, getTermsOnYear, SolarTerm } from './solar-terms';
-import { coerceInteger, isNumberValue, toPrecision } from './tool';
+import { calcDiffOfSunAndMoon, countSolarTerms, getTermOnDay, getTermsOnYear, SolarTerm } from './solar-terms';
+import { coerceInteger, isNumberValue, sameDate } from './tool';
 
 export const TIME_ZONE_OFFSET = new Date().getTimezoneOffset();
 export const CHINESE_OFFSET = -480;
@@ -12,8 +12,6 @@ const CAPITALIZE_TEN_NUMBER: Array<string> = ['初', '十', '廿', '卅'];
 
 
 const DAY_TIME = 24 * 60 * 60 * 1000;
-const SUN_DAY_LONGITUDE_DIFF = 360 / 355;
-const MOON_DAY_LONGITUDE_DIFF = 360 / 29 / 2;
 const YEAR_ORIGIN = new Date(1984, 1, 2);
 const MONTH_ORIGIN = new Date(2013, 11, 7);
 const DAY_ORIGIN = new Date(1949, 9, 1, 0);
@@ -24,23 +22,20 @@ export function getDaysOnYear(year: number): number {
   return Math.ceil((Date.UTC(year, 11, 31, 23, 59, 59, 999) - Date.UTC(year, 0, 1)) / DAY_TIME);
 }
 
-export function isNewMoon(date: Date): boolean {
-  const startTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 10);
-  const time = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 14, 59, 59);
-  let sunResult: number;
-  let moonResult: number;
+function detectNewMoon(date: Date): boolean {
+  const startTime = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const time = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+  let oldSum: number;
+  let sum: number;
   let result = false;
 
   do {
-    sunResult = calcSunEclipticLongitude(time);
-    moonResult = calcMoonEclipticLongitude(time);
-    if (sunResult + MOON_DAY_LONGITUDE_DIFF >= 360) {
-      sunResult = sunResult - 360;
+    oldSum = sum!;
+    sum = calcDiffOfSunAndMoon(time);
+    if (!isNaN(oldSum) && sum > oldSum) {
+      break;
     }
-    if (moonResult + MOON_DAY_LONGITUDE_DIFF >= 360) {
-      moonResult = moonResult - 360;
-    }
-    if (Math.abs(sunResult - moonResult) < MOON_DAY_LONGITUDE_DIFF) {
+    if (sum < 1) {
       result = true;
       break;
     }
@@ -48,6 +43,19 @@ export function isNewMoon(date: Date): boolean {
   } while (time.getTime() >= startTime.getTime());
 
   return result;
+}
+
+export function isNewMoon(date: Date): boolean {
+  const startTime = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const yesterdday = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1);
+
+  // If the sun ecliptic longitude overlay with moon ecliptic longitude almost at zero hour,
+  // need to detect yesterday whether is new moon.
+  if (calcDiffOfSunAndMoon(startTime) < 1 && detectNewMoon(yesterdday)) {
+    return false;
+  }
+
+  return detectNewMoon(date);
 }
 
 export function countNewMoonDays(fromDate: Date, toDate: Date): Array<Date> {
@@ -75,9 +83,13 @@ export function countNewMoonDays(fromDate: Date, toDate: Date): Array<Date> {
 }
 
 export function isLeapMonth(date: Date): boolean {
+  // Conflict with existed chinese calendar.
+  // These dates should be in a leap month.
+  const conflictedDates = [new Date(1985, 1, 20)];
+
   const year = date.getFullYear();
   const guessWinterSolstice = new Date(year - 1, 11, 1);
-  const guessRainWater = new Date(year + 1, 1, 31);
+  const guessRainWater = new Date(year + 1, 1, 29);
   const moonDays = countNewMoonDays(guessWinterSolstice, guessRainWater);
   const length = moonDays.filter((moonDay) => moonDay.getTime() <= date.getTime()).length;
   const currentMoonDay = moonDays[length - 1];
@@ -85,6 +97,9 @@ export function isLeapMonth(date: Date): boolean {
   let isLeap = true;
   let term: SolarTerm | null;
 
+  if (conflictedDates.some((item) => sameDate(item, currentMoonDay))) {
+    return false;
+  }
   do {
     term = getTermOnDay(currentMoonDay);
     if (term && term.longitude % 30 === 0) {
@@ -96,6 +111,8 @@ export function isLeapMonth(date: Date): boolean {
 
   return isLeap;
 }
+
+
 
 abstract class LunarDateProperty extends Number {
   public readonly nativeDate: Date;
@@ -168,13 +185,11 @@ export class LunarMonth extends LunarDateProperty {
   }
 
   protected calcDiff(value: number): number {
-    const isLater = MONTH_ORIGIN.getTime() < this.nativeDate.getTime();
     const terms: Array<SolarTerm> = countSolarTerms(MONTH_ORIGIN, this.nativeDate);
     const nonMidTerms: Array<SolarTerm> = terms.filter((item) => {
       return item.longitude % 30 !== 0;
     });
     const offset: number = nonMidTerms.length - 1;
-    console.log(`${this.nativeDate.toISOString()} <-> ${MONTH_ORIGIN.toISOString()}: offset: ${offset}; terms: ${terms.length}; nonMidTerms: ${nonMidTerms.length};`);
 
     return offset;
   }
@@ -263,7 +278,6 @@ export class ChineseDate extends Date {
 
     do {
       i++;
-      i >= 30 && console.log(`${i} ${testDate.toISOString()}`);
       testDate = new Date(this.getFullYear(), this.getMonth(), this.getDate(), -i);
     } while (!isNewMoon(testDate) && i <= 30);
 
