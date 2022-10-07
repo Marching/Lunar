@@ -14,6 +14,10 @@ export class SolarTerm {
   constructor(public readonly order: number, public readonly longitude: number, public label: string) {
   }
 
+  isMidTerm(): boolean {
+    return this.longitude % 30 === 0;
+  }
+
   toString = (): string => {
     return `${this.label}` + (this.date ? ` ${this.date?.toChineseString()}` : ``);
   };
@@ -25,7 +29,7 @@ export class SolarTerm {
 }
 
 export function create24SolarTerms(lang: Array<string> | ReadonlyArray<string> = SOLAR_TERMS_ZH): Map<number, SolarTerm> {
-  const terms = new Map<number, SolarTerm>();
+  const terms: Map<number, SolarTerm> = new Map<number, SolarTerm>();
 
   for (let i = 1; i <= 24; i++) {
     terms.set(i, SolarTerm.create(i, lang));
@@ -54,14 +58,19 @@ export function calcDiffOfSunAndMoon(time: Date): number {
 }
 
 export function getTermOnDay(date: Date, coordinate: GeoJSON.Position = CH_STANDARD_POSITION): SolarTerm | null {
-  const dateS = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const dateE = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
-  const eclipticLngS = toPrecision(calcSunEclipticLongitude(dateS, coordinate), 3);
-  const eclipticLngE = toPrecision(calcSunEclipticLongitude(dateE, coordinate), 3);
+  const dateS: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dateE: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+  const eclipticLngS: number = toPrecision(calcSunEclipticLongitude(dateS, coordinate), 3);
+  const eclipticLngE: number = toPrecision(calcSunEclipticLongitude(dateE, coordinate), 3);
   let result: SolarTerm | null = null;
-  let x: number = Math.floor(eclipticLngE); // An integer
+  let x: number = Math.floor(eclipticLngE); // An integer;
+  let i: number = 0;
 
   do {
+    if (i > 15) {
+      console.warn(`Infinite loop! |getTermOnDay| ${eclipticLngS} <-> ${eclipticLngE}`);
+      break;
+    }
     if (x % 15 === 0 && eclipticLngS <= (x === 0 ? 360 : x) && eclipticLngE >= x) {
       const index = x / 15 + 1;
 
@@ -72,6 +81,7 @@ export function getTermOnDay(date: Date, coordinate: GeoJSON.Position = CH_STAND
       }
     }
     x = (x - 1 + 360) % 360;
+    i++;
   } while (x > eclipticLngS);
 
   return result;
@@ -96,9 +106,9 @@ export function countSolarTerms(fromDate: Date, toDate: Date): Array<SolarTerm> 
     if (target) {
       terms.push(target);
       startDate.setDate(startDate.getDate() + 13);
-    } else {
-      startDate.setDate(startDate.getDate() + 1);
+      continue;
     }
+    startDate.setDate(startDate.getDate() + 1);
   } while (startDate.getTime() <= endDate.getTime());
 
   return terms;

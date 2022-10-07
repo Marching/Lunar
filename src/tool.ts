@@ -8,7 +8,7 @@ export function toPrecision(value: number, precision: number): number {
  * Whether the provided value is considered a number.
  * @docs-private
  */
- export function isNumberValue(value: any): boolean {
+export function isNumberValue(value: any): boolean {
   // parseFloat(value) handles most of the cases we're interested in (it treats null, empty string,
   // and other non-number values as NaN, where Number just uses 0) but it considers the string
   // '123hello' to be a valid number. Therefore we also check if Number(value) is NaN.
@@ -29,7 +29,7 @@ export function coerceInteger(value: any, fallbackValue = 0): number {
  * @returns 0 if the dates are equal, a number less than 0 if the first date is earlier,
  *     a number greater than 0 if the first date is later.
  */
- function compareDate(first: Date, second: Date): number {
+ export function compareDate(first: Date, second: Date): number {
   return (
     first.getFullYear() - second.getFullYear() ||
     first.getMonth() - second.getMonth() ||
@@ -49,4 +49,9 @@ export function sameDate(first: Date | null, second: Date | null): boolean {
     return !compareDate(first, second);
   }
   return first == second;
+}
+
+
+export function printDebug(fun: string | (() => string), on?: boolean): void {
+  on && console.info(typeof fun === 'function' ? fun() : fun);
 }

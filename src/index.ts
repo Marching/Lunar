@@ -1,4 +1,11 @@
 export * from './tool';
 export * from './intl';
-export * from './lunar-calendar';
+export {
+  ChineseDate,
+  OLunarDay,
+  OLunarMonth,
+  OLunarYear,
+  getDaysOnYear,
+  countNewMoons
+} from './lunar-calendar';
 export * from './solar-terms';
