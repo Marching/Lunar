@@ -1,5 +1,5 @@
 import { sameDate, toPrecision } from './tool';
-import { ChineseDate, countNewMoons, getDaysOnYear, isLeapMonth, isNewMoon } from './lunar-calendar';
+import { ChineseDate, countNewMoons, countDaysOnYear, isLeapMonth, isNewMoon } from './lunar-calendar';
 import { calcDiffOfSunAndMoon } from './solar-terms';
 
 describe('Lunar calendar', (): void => {
@@ -21,15 +21,15 @@ describe('Lunar calendar', (): void => {
 
   describe('Count days on year', (): void => {
     test('2000', (): void => {
-      expect(getDaysOnYear(2000)).toBe(366);
+      expect(countDaysOnYear(2000)).toBe(366);
     });
 
     test('2010', (): void => {
-      expect(getDaysOnYear(2010)).toBe(365);
+      expect(countDaysOnYear(2010)).toBe(365);
     });
 
     test('2020', (): void => {
-      expect(getDaysOnYear(2020)).toBe(366);
+      expect(countDaysOnYear(2020)).toBe(366);
     });
   });
 

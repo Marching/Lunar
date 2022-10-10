@@ -1,4 +1,6 @@
 src
+
+.github
 .husky
 .vscode
 .eslintrc.json
@@ -7,3 +9,5 @@ src
 jestconfig.json
 package-lock.json
 tsconfig.json
+tsconfig.spec.json
+tsconfig.src.json

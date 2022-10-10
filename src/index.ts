@@ -1,11 +1,17 @@
-export * from './tool';
+export {
+  toPrecision,
+  isNumberValue,
+  coerceInteger,
+  compareDate,
+  sameDate
+} from './tool';
 export * from './intl';
 export {
   ChineseDate,
   OLunarDay,
   OLunarMonth,
   OLunarYear,
-  getDaysOnYear,
+  countDaysOnYear,
   countNewMoons
 } from './lunar-calendar';
 export * from './solar-terms';

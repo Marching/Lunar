@@ -1,5 +1,5 @@
 import { calcDiffOfSunAndMoon, countSolarTerms, getTermOnDay, getTermsOnYear, SolarTerm } from './solar-terms';
-import { coerceInteger, isNumberValue, printDebug, toPrecision } from './tool';
+import { coerceInteger, isNumberValue, toPrecision } from './tool';
 
 export const TIME_ZONE_OFFSET: number = new Date().getTimezoneOffset();
 export const CHINESE_OFFSET: number = -480;
@@ -18,7 +18,7 @@ const DAY_ORIGIN: Date = new Date(1949, 9, 1, 0);
 
 
 
-export function getDaysOnYear(year: number): number {
+export function countDaysOnYear(year: number): number {
   return Math.ceil((Date.UTC(year, 11, 31, 23, 59, 59, 999) - Date.UTC(year, 0, 1)) / DAY_TIME);
 }
 
@@ -44,19 +44,17 @@ export function isNewMoon(date: Date): boolean {
 
   do {
     if (i > 24) {
-      const msg = `Infinite loop! start time: ${startTime.toLocaleString()}, current time: ${endTime.toLocaleString()}. => ${endTime.getTime() >= stime}`;
-
-      console.warn(msg);
+      console.warn(`Potential infinite loop! Start time: ${startTime.toLocaleString()}, current time: ${endTime.toLocaleString()}. => ${endTime.getTime() >= stime}`);
       break;
     }
 
     oldSum = sum!;
     sum = calcDiffOfSunAndMoon(endTime);
-    if (!isNaN(oldSum) && sum > oldSum) {
-      break;
-    }
     if (sum < 0.5) {
       result = true;
+      break;
+    }
+    if (!isNaN(oldSum) && sum > oldSum) {
       break;
     }
     if (endTime.getHours() === 0 && endTime.getMinutes() !== 0) {
@@ -141,8 +139,6 @@ export function getWinterSolsticeRange(date: Date, debug?: boolean): Array<Date>
   }
   newMoons.pop(); // Remove the latest eleventh month.
 
-  printDebug(newMoons.map(item => item.toLocaleString()).join('\n'), debug);
-
   return newMoons;
 }
 
@@ -195,7 +191,6 @@ export function isLeapMonth(date: Date, debug?: boolean): boolean {
     if (leapIndex < 0) {
       leapIndex = countNewMoon - 1;
     }
-    printDebug(`leapIndex: ${leapIndex}`, debug);
     const leapMonthStart: Date = newMoons[leapIndex];
     let leapMonthEnd: Date = newMoons[leapIndex + 1];
 
@@ -211,7 +206,6 @@ export function isLeapMonth(date: Date, debug?: boolean): boolean {
 
     isLeap = currentTime >= leapMonthStart.getTime() && currentTime < leapMonthEnd.getTime();
   }
-  printDebug(`isLeapMonth testDate: ${date.toLocaleString()}; isLeap: ${isLeap}; isNewMoon:   ${isNewMoon(date)}`, debug);
 
   return isLeap;
 }
@@ -392,7 +386,6 @@ export class ChineseDate extends Date {
     } else {
       month--;
     }
-    printDebug(`A -> ${month} | date: ${newMoons[month].toLocaleString()} | countNewMoon: ${countNewMoon};`, true);
     if (countNewMoon === 13) {
       const leap = newMoons.find((item) => isMissingMidTermMonth(item)) || newMoons[countNewMoon - 1];
 
@@ -400,9 +393,7 @@ export class ChineseDate extends Date {
         month--;
       }
     }
-    printDebug(`B -> month: ${month}`, true);
     month = month > 1 ? ((11 + month) % 12) : 11 + month;
-    printDebug(`C -> month: ${month}`, true);
 
     return new LunarMonth(month, this);
   }
@@ -418,7 +409,7 @@ export class ChineseDate extends Date {
     while (!isNewMoon(testDate)) {
       i++;
       if (i > 30) {
-        throw new Error(`getLunarDay -> Invalid lunar day ${i}.`);
+        throw new Error(`Potential infinite loop! Invalid lunar day ${i}.`);
       }
       testDate.setDate(testDate.getDate() - 1);
     };

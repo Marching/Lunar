@@ -60,18 +60,16 @@ export function calcDiffOfSunAndMoon(time: Date): number {
 export function getTermOnDay(date: Date, coordinate: GeoJSON.Position = CH_STANDARD_POSITION): SolarTerm | null {
   const dateS: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const dateE: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
-  const eclipticLngS: number = toPrecision(calcSunEclipticLongitude(dateS, coordinate), 3);
+  let eclipticLngS: number = toPrecision(calcSunEclipticLongitude(dateS, coordinate), 3);
   const eclipticLngE: number = toPrecision(calcSunEclipticLongitude(dateE, coordinate), 3);
   let result: SolarTerm | null = null;
   let x: number = Math.floor(eclipticLngE); // An integer;
-  let i: number = 0;
 
+  if (eclipticLngS > eclipticLngE) {
+    eclipticLngS = eclipticLngS - 360;
+  }
   do {
-    if (i > 15) {
-      console.warn(`Infinite loop! |getTermOnDay| ${eclipticLngS} <-> ${eclipticLngE}`);
-      break;
-    }
-    if (x % 15 === 0 && eclipticLngS <= (x === 0 ? 360 : x) && eclipticLngE >= x) {
+    if (x % 15 === 0 && eclipticLngS <= x && eclipticLngE >= x) {
       const index = x / 15 + 1;
 
       if (index >= 1 && index <= 24) {
@@ -80,8 +78,7 @@ export function getTermOnDay(date: Date, coordinate: GeoJSON.Position = CH_STAND
         break;
       }
     }
-    x = (x - 1 + 360) % 360;
-    i++;
+    x--;
   } while (x > eclipticLngS);
 
   return result;

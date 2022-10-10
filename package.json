@@ -1,5 +1,5 @@
 {
-  "name": "lunar",
+  "name": "@marchingy/lunar",
   "version": "0.0.3",
   "author": "Marching Gray Young",
   "license": "MIT",
@@ -9,19 +9,42 @@
     "tolar",
     "lunar"
   ],
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "exports": {
+    "import": {
+      "path": "./lib/esm2015/index.js",
+      "type": "module"
+    },
+    "require": {
+      "path": "./lib/cj/index.js",
+      "type": "commonjs"
+    }
+  },
+  "main": "./lib/cj/index.js",
+  "module": "./lib/index.js",
+  "type": "module",
+  "types": "./lib/index.d.ts",
+  "typings": "./lib/index.d.ts",
+  "directories": {
+    "lib": "./lib"
+  },
   "files": [
-    "lib/**/*"
+    "./lib/**/*"
   ],
+  "esm2020": "./lib/index.js",
+  "esm2015": "./lib/esm2015/index.js",
+  "umd": "./lib/umd/index.js",
   "scripts": {
-    "lint": "tslint -p tsconfig.json",
+    "lint": "eslint -c .eslintrc.json --ext .ts ./src",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "jest --config jestconfig.json",
     "test-watch": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --config jestconfig.json",
-    "build": "tsc",
+    "build": "tsc --build --clean && npm run build:curr && npm run build:es6 && npm run build:commonjs && npm run build:umd",
+    "build:curr": "tsc --project tsconfig.src.json",
+    "build:es6": "tsc --project tsconfig.src.json --declaration false --module es6 --target es6 --outDir lib/esm2015",
+    "build:commonjs": "tsc --project tsconfig.src.json --declaration false --module commonjs --target es6 --outDir lib/cj",
+    "build:umd": "tsc --project tsconfig.src.json --declaration false --module umd --target es6 --outDir lib/umd",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test && npm run lint",
+    "prepublishOnly": "npm run lint",
     "preversion": "npm run lint",
     "version": "npm run format && git add -A src",
     "postversion": "git push && git push --tags",
@@ -30,12 +53,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GrayYoung/Lunar.git"
+    "url": "https://github.com/Marching/Lunar.git"
   },
   "bugs": {
-    "url": "https://github.com/GrayYoung/Lunar/issues"
+    "url": "https://github.com/Marching/Lunar/issues"
   },
-  "homepage": "https://github.com/GrayYoung/Lunar#readme",
+  "homepage": "https://github.com/Marching/Lunar#readme",
   "devDependencies": {
     "@types/jest": "^29.1.2",
     "@typescript-eslint/eslint-plugin": "^5.39.0",
@@ -52,12 +75,8 @@
     "ts-node": "~10.9.1",
     "typescript": "^4.8.4"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@types/geojson": "^7946.0.10",
     "ephemeris": "^2.0.0"
-  },
-  "publishConfig": {
-    "name": "@marching/lunar",
-    "registry": "https://github.com/GrayYoung/Lunar.git"
   }
 }

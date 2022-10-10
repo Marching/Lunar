@@ -16,11 +16,11 @@ Including:
 
 <br />
 
-> Note: 20/1/1985 is earlier than the date that the standard was defined on, this date should be a leap month 12 according to astronomy, but it is a first month of chinese calendar in real world.
-
 <br />
 
 ### API
+
+#### class ChineseDate(inherit native Date)
 
 #### __calcSunEclipticLongitude(time: Date): number__
 Calculate sun ecliptic longitude at the time.
