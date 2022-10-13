@@ -12,6 +12,10 @@ export {
   OLunarMonth,
   OLunarYear,
   countDaysOnYear,
-  countNewMoons
+  countNewMoons,
+  getWinterSolstice,
+  isNewMoon,
+  isMissingMidTermMonth,
+  isLeapMonth
 } from './lunar-calendar';
 export * from './solar-terms';

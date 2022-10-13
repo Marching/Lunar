@@ -1,6 +1,6 @@
 import { sameDate } from './tool';
 import { ChineseDate } from './lunar-calendar';
-import { calcSunEclipticLongitude, create24SolarTerms, getTermOnDay, getTermsOnYear } from './solar-terms';
+import { calcSunEclipticLongitude, create24SolarTerms, getTermOnDay, getTermsOnYear, SolarTerm } from './solar-terms';
 
 describe('Lunar', (): void => {
   const solarTerms = create24SolarTerms();
@@ -167,6 +167,24 @@ describe('Lunar', (): void => {
   });
 
   describe('Solar terms', (): void => {
+    test('Test the constructor', (): void => {
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const term = new SolarTerm(30, '');
+      }).toThrowError();
+
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const term = new SolarTerm(-30, '');
+      }).toThrowError();
+
+
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const term = new SolarTerm(4.5, '');
+      }).toThrowError();
+    });
+
     test('The 24 terms', (): void => {
       const terms = create24SolarTerms();
 

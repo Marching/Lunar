@@ -9,22 +9,28 @@ import { ChineseDate } from './lunar-calendar';
  * @link http://c.gb688.cn/bzgk/gb/showGb?type=online&hcno=E107EA4DE9725EDF819F33C60A44B296
  */
 export class SolarTerm {
-  date?: ChineseDate;
+  public date?: ChineseDate;
+  public readonly order: number;
+  public readonly longitude: number;
 
-  constructor(public readonly order: number, public readonly longitude: number, public label: string) {
-  }
-
-  isMidTerm(): boolean {
-    return this.longitude % 30 === 0;
+  constructor(order: number, public label: string) {
+    if (order < 1 || order > 24 || order % 1 !== 0) {
+      throw new Error(`Illegal parameter "order": ${order}, this must be an integer from 1 to 24.`);
+    }
+    this.order = order;
+    this.longitude = (order - 1) * 15;
   }
 
   toString = (): string => {
     return `${this.label}` + (this.date ? ` ${this.date?.toChineseString()}` : ``);
   };
 
+  isMidTerm(): boolean {
+    return this.longitude % 30 === 0;
+  }
+
   static create(index: number, lang: Array<string> | ReadonlyArray<string> = SOLAR_TERMS_ZH): SolarTerm {
-    index = coerceInteger(index);
-    return new SolarTerm(index, (index - 1) * 15, lang[index - 1]);
+    return new SolarTerm(coerceInteger(index), lang[index - 1]);
   }
 }
 
@@ -45,9 +51,9 @@ export function calcSunEclipticLongitude(targetDate: Date, coordinate: GeoJSON.P
   return getPlanet<'sun'>('sun', targetDate, coordinate[0], coordinate[1], 0).observed.sun.apparentLongitudeDd;
 };
 
-export function calcDiffOfSunAndMoon(time: Date): number {
-  const sunResult: number = calcSunEclipticLongitude(time);
-  const moonResult: number = calcMoonEclipticLongitude(time);
+export function calcDiffOfSunAndMoon(time: Date, coordinate: GeoJSON.Position = CH_STANDARD_POSITION): number {
+  const sunResult: number = calcSunEclipticLongitude(time, coordinate);
+  const moonResult: number = calcMoonEclipticLongitude(time, coordinate);
 
   return Math.min(
     Math.abs(sunResult - moonResult),
@@ -84,7 +90,7 @@ export function getTermOnDay(date: Date, coordinate: GeoJSON.Position = CH_STAND
   return result;
 }
 
-export function countSolarTerms(fromDate: Date, toDate: Date): Array<SolarTerm> {
+export function countSolarTerms(fromDate: Date, toDate: Date, coordinate: GeoJSON.Position = CH_STANDARD_POSITION): Array<SolarTerm> {
   const terms: Array<SolarTerm> = [];
   let startDate: Date;
   let endDate: Date;
@@ -99,7 +105,7 @@ export function countSolarTerms(fromDate: Date, toDate: Date): Array<SolarTerm> 
   }
 
   do {
-    target = getTermOnDay(startDate);
+    target = getTermOnDay(startDate, coordinate);
     if (target) {
       terms.push(target);
       startDate.setDate(startDate.getDate() + 13);
@@ -115,5 +121,5 @@ export function countSolarTerms(fromDate: Date, toDate: Date): Array<SolarTerm> 
  * This method will countSolarTerms with params that are the first date and the latest date of the year.
  */
 export function getTermsOnYear(year: number, coordinate: GeoJSON.Position = CH_STANDARD_POSITION): Array<SolarTerm> {
-  return countSolarTerms(new Date(year, 0, 1, 0, 0, 0, 0), new Date(year, 11, 31, 23, 59, 59, 999));
+  return countSolarTerms(new Date(year, 0, 1, 0, 0, 0, 0), new Date(year, 11, 31, 23, 59, 59, 999), coordinate);
 }
