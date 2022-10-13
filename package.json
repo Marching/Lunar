@@ -1,13 +1,18 @@
 {
-  "name": "@marchingy/lunar",
-  "version": "0.0.3",
+  "name": "@marching/lunar",
+  "version": "0.1.0",
   "author": "Marching Gray Young",
   "license": "MIT",
-  "description": "The script to calculate solar term.",
+  "description": "Chinese calendar with the 24 solar terms.",
   "keywords": [
-    "solar",
-    "tolar",
-    "lunar"
+    "chinese calendar",
+    "solar term",
+    "lunar",
+    "new moon",
+    "sexagesimal",
+    "celestial stem",
+    "terrestrial branch",
+    "ecliptic longitude"
   ],
   "exports": {
     "import": {
@@ -49,7 +54,8 @@
     "version": "npm run format && git add -A src",
     "postversion": "git push && git push --tags",
     "prettier:write": "npx prettier --write ./src",
-    "prettier:check": "npx prettier --check ./src"
+    "prettier:check": "npx prettier --check ./src",
+    "modifyScope": "ts-node --project tsconfig.node.json ./modify-scope.ts"
   },
   "repository": {
     "type": "git",

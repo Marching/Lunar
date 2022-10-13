@@ -1,5 +1,5 @@
 import { calcDiffOfSunAndMoon, countSolarTerms, getTermOnDay, getTermsOnYear, SolarTerm } from './solar-terms';
-import { coerceInteger, isNumberValue, toPrecision } from './tool';
+import { toPrecision } from './tool';
 
 export const TIME_ZONE_OFFSET: number = new Date().getTimezoneOffset();
 export const CHINESE_OFFSET: number = -480;
@@ -16,6 +16,40 @@ const YEAR_ORIGIN: Date = new Date(1984, 1, 2);
 const MONTH_ORIGIN: Date = new Date(2013, 11, 7);
 const DAY_ORIGIN: Date = new Date(1949, 9, 1, 0);
 
+/*
+const PRC_TIMEZON_CHANGED_HISTORY = new Map<number, DaylightSavingTimeChange>([
+  [1991, {
+    divider: new Date(1991, 8, 15, 2),
+    offset: 0
+  }],
+  [1987, {
+    daylightSavingTime: {
+      start: new Date(1919, 3, 12, 2),
+      end: new Date(1991, 9, 13, 2)
+    },
+    divider: null,
+    offset: 1
+  }],
+  [1919, {
+    daylightSavingTime: {
+      start: new Date(1919, 3, 13),
+      end: new Date(1991, 9, 1)
+    },
+    divider: null,
+    offset: 1
+  }]
+]);
+
+
+interface DaylightSavingTimeChange {
+  daylightSavingTime?: {
+    start: Date;
+    end: Date;
+  };
+  divider: Date | null;
+  offset: number;
+}
+ */
 
 
 export function countDaysOnYear(year: number): number {
@@ -23,16 +57,16 @@ export function countDaysOnYear(year: number): number {
 }
 
 export function isNewMoon(date: Date): boolean {
-  const startTime: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const endTime: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
   const yesterdday: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1, 23, 59, 59);
   const tomorrow: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
-  const startDiff: number = toPrecision(calcDiffOfSunAndMoon(startTime), 3);
-  const endDiff: number = toPrecision(calcDiffOfSunAndMoon(endTime), 3);
+  const startTime: Date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+  const endTime: Date = new Date(tomorrow.getTime() - 1000);
+  const startDiff: number = toPrecision(calcDiffOfSunAndMoon(startTime), 4);
+  const endDiff: number = toPrecision(calcDiffOfSunAndMoon(endTime), 4);
 
   // If the sun ecliptic longitude overlay with moon ecliptic longitude almost at zero hour,
   // need to detect yesterday and tomorrow whether are new moon.
-  if ((startDiff < 0.5 && toPrecision(calcDiffOfSunAndMoon(yesterdday), 3) <= startDiff) || (endDiff < 0.5 && toPrecision(calcDiffOfSunAndMoon(tomorrow), 3) < endDiff)) {
+  if ((startDiff < 0.5 && toPrecision(calcDiffOfSunAndMoon(yesterdday), 4) < startDiff) || (endDiff < 0.5 && toPrecision(calcDiffOfSunAndMoon(tomorrow), 4) < endDiff)) {
     return false;
   }
 
@@ -44,24 +78,30 @@ export function isNewMoon(date: Date): boolean {
 
   do {
     if (i > 24) {
-      console.warn(`Potential infinite loop! Start time: ${startTime.toLocaleString()}, current time: ${endTime.toLocaleString()}. => ${endTime.getTime() >= stime}`);
+      console.warn(`Potential infinite loop! Start time: ${startTime.toLocaleString()}, current time: ${endTime.toLocaleString()}. =>  ${endTime.getTime() >= stime}`);
       break;
     }
-
     oldSum = sum!;
     sum = calcDiffOfSunAndMoon(endTime);
-    if (sum < 0.5) {
-      result = true;
+    if (!isNaN(oldSum) && sum > oldSum) {
       break;
     }
-    if (!isNaN(oldSum) && sum > oldSum) {
+    if (sum < 0.5) {
+      result = true;
       break;
     }
     if (endTime.getHours() === 0 && endTime.getMinutes() !== 0) {
       endTime.setHours(endTime.getHours(), 0, 0);
     } else {
-      endTime.setHours(endTime.getHours() - 1, 59, 59);
+      endTime.setTime(endTime.getTime() - 3600000);
+      endTime.setMinutes(59, 59);
     }
+    /*
+    endTime.setTime(endTime.getTime() - (sum / 2 / (360 / 30)) * DAY_TIME);
+    if (endTime.getTime() <= stime) {
+      break;
+    }
+    */
     i++;
   } while (endTime.getTime() > stime);
 
@@ -100,7 +140,7 @@ export function getWinterSolstice(year: number): Date {
   return winterSolstice;
 }
 
-export function getWinterSolsticeRange(date: Date, debug?: boolean): Array<Date> {
+export function getWinterSolsticeRange(date: Date): Array<Date> {
   const year: number = date.getFullYear();
   let newMoons: Array<Date>;
   let curr11thNewMoon: Date = getWinterSolstice(year);
@@ -180,7 +220,7 @@ export function isMissingMidTermMonth(date: Date): boolean {
   return isMissing;
 }
 
-export function isLeapMonth(date: Date, debug?: boolean): boolean {
+export function isLeapMonth(date: Date): boolean {
   const currentTime: number = date.getTime();
   const newMoons: Array<Date> = getWinterSolsticeRange(date);
   const countNewMoon: number = newMoons.length;
@@ -244,17 +284,18 @@ export interface OLunarYear {
   readonly sexagesimal: () => string;
   readonly zodiac: () => string;
   readonly toString: () => string;
+  readonly valueOf: () => number;
 }
 
 class LunarYear extends LunarDateProperty implements OLunarYear {
+  toString = (): string => {
+    return `${this.sexagesimal()}年 ${this.zodiac()}年`;
+  };
+
   zodiac(): string {
     const indexBranch = this.calcTerrestrialBranch();
 
     return `${ZODIACS[indexBranch]}`;
-  }
-
-  toString(): string {
-    return `${this.sexagesimal()}年 ${this.zodiac()}年`;
   }
 
   protected calcDiff(): number {
@@ -273,13 +314,18 @@ class LunarYear extends LunarDateProperty implements OLunarYear {
 }
 
 export interface OLunarMonth {
-  readonly isLeap: () => boolean;
   readonly capital: () => string;
+  readonly isLeap: () => boolean;
   readonly sexagesimal: () => string;
   readonly toString: () => string;
+  readonly valueOf: () => number;
 }
 
 class LunarMonth extends LunarDateProperty implements OLunarMonth {
+  toString = (): string => {
+    return `${this.sexagesimal()}月 ${this.capital()}月`;
+  };
+
   isLeap(): boolean {
     return isLeapMonth(this.nativeDate);
   }
@@ -288,10 +334,6 @@ class LunarMonth extends LunarDateProperty implements OLunarMonth {
     const value = this.valueOf();
 
     return value > 10 ? `${CAPITALIZE_TEN_NUMBER[Math.floor(value / 10)]}${CAPITALIZE_NUMBER[value % 10 - 1]}` : `${CAPITALIZE_NUMBER[value - 1]}`;
-  }
-
-  toString(): string {
-    return `${this.sexagesimal()}月 ${this.capital()}月`;
   }
 
   protected calcDiff(value: number): number {
@@ -309,18 +351,19 @@ export interface OLunarDay {
   readonly capital: () => string;
   readonly sexagesimal: () => string;
   readonly toString: () => string;
+  readonly valueOf: () => number;
 }
 
 class LunarDay extends LunarDateProperty implements OLunarDay {
+  toString = (): string => {
+    return `${this.sexagesimal()}日 ${this.capital()}`;
+  };
+
   capital(): string {
     const value: number = this.valueOf();
     const unit: number = value % 10;
 
     return `${CAPITALIZE_TEN_NUMBER[Math.floor(value / 10)]}${unit === 0 ? CAPITALIZE_NUMBER[9] : CAPITALIZE_NUMBER[unit - 1]}`;
-  }
-
-  toString(): string {
-    return `${this.sexagesimal()}日 ${this.capital()}`;
   }
 
   protected calcDiff(value: number): number {
@@ -332,35 +375,6 @@ class LunarDay extends LunarDateProperty implements OLunarDay {
  * @description 8h = 28800000ms, minus 8 hours to get china time zone date.
  */
 export class ChineseDate extends Date {
-
-  constructor();
-  constructor(value: Date | number | string);
-  constructor(
-    year: number,
-    month?: number,
-    date?: number,
-    hours?: number,
-    minutes?: number,
-    seconds?: number,
-    ms?: number,
-  );
-  constructor(
-    year?: Date | number | string,
-    month?: number,
-    date?: number,
-    hours?: number,
-    minutes?: number,
-    seconds?: number,
-    ms?: number
-  ) {
-    if (isNumberValue(year) && isNumberValue(month)) {
-      super(Date.UTC(coerceInteger(year), coerceInteger(month), coerceInteger(date), coerceInteger(hours), coerceInteger(minutes), coerceInteger(seconds), coerceInteger(ms)) - 28800000);
-    } else if (typeof year !== 'undefined') {
-      super(year);
-    } else {
-      super();
-    }
-  }
 
   /**
    * 

@@ -18,6 +18,7 @@ jobs:
           registry-url: https://registry.npmjs.org/
           scope: '@marchingy'
       - run: npm install
+      - run: npm run modifyScope
       - run: npm publish --access=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
