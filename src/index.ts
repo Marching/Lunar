@@ -7,10 +7,10 @@ export {
 } from './tool';
 export * from './intl';
 export {
-  ChineseDate,
-  OLunarDay,
-  OLunarMonth,
-  OLunarYear,
+  type ChineseDate,
+  type OLunarDay,
+  type OLunarMonth,
+  type OLunarYear,
   countDaysOnYear,
   countNewMoons,
   getWinterSolstice,

@@ -35,6 +35,7 @@
       "default": "generic",
       "readonly": "generic"
     }],
+    "@typescript-eslint/consistent-type-imports": "off",
     "@typescript-eslint/comma-dangle": ["error", "never"],
     "@typescript-eslint/no-array-constructor": "off",
     "@typescript-eslint/no-explicit-any": "off",
